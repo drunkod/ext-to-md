@@ -1,0 +1,55 @@
+{
+  "name": "codemap-exporter",
+  "displayName": "Code Map Exporter",
+  "description": "Export Windsurf Code Maps to Markdown - No DevTools needed!",
+  "version": "2.0.0",
+  "publisher": "your-name",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codemap.export",
+        "title": "Code Map: Export to Markdown"
+      },
+      {
+        "command": "codemap.autoExport",
+        "title": "Code Map: Auto Export (CDP)"
+      },
+      {
+        "command": "codemap.setupCDP",
+        "title": "Code Map: Setup Auto-Export"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "codemap.export",
+        "key": "ctrl+alt+m",
+        "mac": "cmd+alt+m"
+      }
+    ],
+    "configuration": {
+      "title": "Code Map Exporter",
+      "properties": {
+        "codemapExporter.cdpPort": {
+          "type": "number",
+          "default": 9229,
+          "description": "Chrome DevTools Protocol port for auto-export"
+        },
+        "codemapExporter.autoExportPath": {
+          "type": "string",
+          "default": "",
+          "description": "Default folder for exported markdown files"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "chrome-remote-interface": "^0.33.0"
+  }
+}
