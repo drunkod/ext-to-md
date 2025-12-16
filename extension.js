@@ -1,5 +1,6 @@
 const vscode = require('vscode');
 const path = require('path');
+const fs = require('fs');
 const { parseCodeMapHTML } = require('./src/parser');
 const { generateMarkdown } = require('./src/markdownGenerator');
 const { extractCodeMapViaCDP, checkCDPConnection } = require('./src/cdpExtractor');
@@ -53,7 +54,7 @@ function activate(context) {
                 }, async (progress) => {
                     progress.report({ message: "Expanding AI guides..." });
 
-                    // Extract via CDP (this now expands guides first)
+                    // Extract via CDP
                     const data = await extractCodeMapViaCDP(port);
 
                     if (!data.success) {
@@ -62,9 +63,14 @@ function activate(context) {
 
                     progress.report({ message: "Parsing content..." });
 
-                    // Parse and generate markdown
+                    // Parse HTML
                     const codeMapData = parseCodeMapHTML(data.html);
                     codeMapData.title = data.title;
+
+                    progress.report({ message: "Reading referenced files..." });
+
+                    // Read actual file contents from workspace
+                    const fileContents = await readReferencedFiles(codeMapData.files);
 
                     // Get config options
                     const includeGuides = config.get('includeGuides', true);
@@ -74,7 +80,8 @@ function activate(context) {
 
                     const markdown = generateMarkdown(codeMapData, {
                         includeGuides,
-                        includeFilesSection
+                        includeFilesSection,
+                        fileContents  // Pass full file contents
                     });
 
                     // Show stats
@@ -132,10 +139,14 @@ function activate(context) {
                     }
                 }
 
+                // Read actual file contents
+                const fileContents = await readReferencedFiles(codeMapData.files);
+
                 const config = vscode.workspace.getConfiguration('codemapExporter');
                 const markdown = generateMarkdown(codeMapData, {
                     includeGuides: config.get('includeGuides', true),
-                    includeFilesSection: config.get('includeFilesSection', true)
+                    includeFilesSection: config.get('includeFilesSection', true),
+                    fileContents
                 });
 
                 await saveMarkdown(codeMapData.title, markdown);
@@ -145,6 +156,56 @@ function activate(context) {
             }
         })
     );
+}
+
+/**
+ * Read actual file contents from workspace for all referenced files
+ */
+async function readReferencedFiles(filesMap) {
+    const fileContents = {};
+
+    if (!filesMap || !vscode.workspace.workspaceFolders) {
+        return fileContents;
+    }
+
+    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+
+    for (const filename of Object.keys(filesMap)) {
+        try {
+            // Try to find the file in workspace
+            const possiblePaths = [
+                path.join(workspaceRoot, filename),
+                filename // absolute path
+            ];
+
+            // Also search in subdirectories
+            const files = await vscode.workspace.findFiles(`**/${filename}`, '**/node_modules/**', 1);
+            if (files.length > 0) {
+                possiblePaths.unshift(files[0].fsPath);
+            }
+
+            for (const filePath of possiblePaths) {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        const content = fs.readFileSync(filePath, 'utf8');
+                        fileContents[filename] = content;
+                        console.log(`Read file: ${filename}`);
+                        break;
+                    }
+                } catch (e) {
+                    // Try next path
+                }
+            }
+
+            if (!fileContents[filename]) {
+                console.log(`Could not find file: ${filename}`);
+            }
+        } catch (error) {
+            console.error(`Error reading ${filename}:`, error.message);
+        }
+    }
+
+    return fileContents;
 }
 
 async function saveMarkdown(title, markdown) {
@@ -234,7 +295,6 @@ async function showInlineExtractor() {
         { enableScripts: true }
     );
 
-    // Updated script that also clicks "See more" buttons
     const extractorScript = `(async function(){const c=document.querySelector('.editor-group-container.active .code-map-editor-container')||document.querySelector('.code-map-editor-container');if(!c){console.error('❌ No Code Map found!');return}console.log('📖 Expanding AI guides...');const btns=c.querySelectorAll('.trace-guide-toggle');let clicked=0;btns.forEach(b=>{if(b.textContent.toLowerCase().includes('see more')){b.click();clicked++}});if(clicked>0){console.log('⏳ Waiting for guides to load...');await new Promise(r=>setTimeout(r,2000))}c.querySelectorAll('.trace-header[data-collapsed="true"]').forEach(h=>h.click());await new Promise(r=>setTimeout(r,300));const t=c.querySelector('.code-map-title')?.textContent?.trim()||'Untitled';const cl=c.cloneNode(true);cl.querySelectorAll('.trace-locations,.trace-guide-container').forEach(e=>e.style.display='block');const guides=cl.querySelectorAll('.rendered-trace-guide').length;const d={title:t,html:cl.outerHTML};navigator.clipboard.writeText(JSON.stringify(d)).then(()=>console.log('✅ Copied! '+guides+' guides found. Press Ctrl+Alt+M'))})()`;
 
     panel.webview.html = `<!DOCTYPE html>

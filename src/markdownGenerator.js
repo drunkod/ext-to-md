@@ -2,7 +2,11 @@
  * Generate Markdown from parsed Code Map data
  */
 function generateMarkdown(codeMap, options = {}) {
-    const { includeGuides = true, includeFilesSection = true } = options;
+    const {
+        includeGuides = true,
+        includeFilesSection = true,
+        fileContents = {}  // Full file contents from workspace
+    } = options;
     const lines = [];
 
     // Title
@@ -41,13 +45,13 @@ function generateMarkdown(codeMap, options = {}) {
         lines.push(...generateTrace(trace, includeGuides));
     });
 
-    // Files Section
+    // Files Section with full content
     if (includeFilesSection && codeMap.files && Object.keys(codeMap.files).length > 0) {
         lines.push('---');
         lines.push('');
         lines.push('## Referenced Files');
         lines.push('');
-        lines.push(generateFilesSection(codeMap.files));
+        lines.push(generateFilesSection(codeMap.files, fileContents));
     }
 
     // Footer
@@ -63,14 +67,12 @@ function generateMarkdown(codeMap, options = {}) {
  * Format description with step references
  */
 function formatDescription(description) {
-    // Bold step references like [2d], [4b]
     return description.replace(/\[(\d+[a-z])\]/g, '**[$1]**');
 }
 
 function generateTrace(trace, includeGuides) {
     const lines = [];
 
-    // Trace header
     lines.push(`## ${trace.number}. ${trace.title}`);
     lines.push('');
 
@@ -79,7 +81,6 @@ function generateTrace(trace, includeGuides) {
         lines.push('');
     }
 
-    // Include AI-generated guide if present
     if (includeGuides && trace.guide && trace.guide.content) {
         lines.push('<details>');
         lines.push(`<summary>📖 <strong>${trace.guide.label || 'AI Generated Guide'}</strong> (click to expand)</summary>`);
@@ -90,7 +91,6 @@ function generateTrace(trace, includeGuides) {
         lines.push('');
     }
 
-    // Process locations
     if (trace.locations.length > 0) {
         lines.push(...generateLocations(trace.locations));
     }
@@ -119,16 +119,13 @@ function generateLocations(locations) {
         } else if (loc.type === 'code') {
             lines.push('');
             
-            // Step header
             let header = `${indent}#### [${loc.stepNumber}] ${loc.title}`;
             lines.push(header);
             
-            // File reference
             if (loc.filename) {
                 lines.push(`${indent}📄 \`${loc.filename}\``);
             }
             
-            // Code block
             if (loc.code) {
                 lines.push('');
                 const lang = detectLanguage(loc.filename);
@@ -144,34 +141,41 @@ function generateLocations(locations) {
 }
 
 /**
- * Generate files section in XML format
+ * Generate files section with FULL file content and citation comments
  */
-function generateFilesSection(files) {
+function generateFilesSection(filesMap, fileContents) {
     const lines = [];
 
     lines.push('```xml');
     lines.push('<files>');
 
     // Sort files by name
-    const sortedFiles = Object.keys(files).sort();
+    const sortedFiles = Object.keys(filesMap).sort();
 
     for (const filename of sortedFiles) {
-        const snippets = files[filename];
+        const snippets = filesMap[filename];
+        const fullContent = fileContents[filename];
 
         lines.push(`<file path="${escapeXml(filename)}">`);
 
-        // Add each code snippet with context
-        snippets.forEach((snippet, index) => {
-            if (index > 0) {
-                lines.push('');
-                lines.push('<!-- ... -->');
-                lines.push('');
-            }
+        if (fullContent) {
+            // We have the full file content - insert citations at line numbers
+            const annotatedContent = insertCitationsIntoFile(fullContent, snippets);
+            lines.push(annotatedContent);
+        } else {
+            // Fallback: just show snippets with citations (sorted by line)
+            const sortedSnippets = [...snippets].sort((a, b) => {
+                const lineA = parseInt(a.lineNumber, 10) || 0;
+                const lineB = parseInt(b.lineNumber, 10) || 0;
+                return lineA - lineB;
+            });
 
-            // Add comment with step reference and title
-            lines.push(`<!-- [${snippet.stepNumber}] ${escapeXml(snippet.title)}${snippet.lineNumber ? ` (line ${snippet.lineNumber})` : ''} -->`);
-            lines.push(snippet.code);
-        });
+            sortedSnippets.forEach((snippet) => {
+                const lineInfo = snippet.lineNumber ? ` (line ${snippet.lineNumber})` : '';
+                lines.push(`<!-- [${snippet.stepNumber}] ${escapeXml(snippet.title)}${lineInfo} -->`);
+                lines.push(snippet.code);
+            });
+        }
 
         lines.push('</file>');
     }
@@ -180,6 +184,48 @@ function generateFilesSection(files) {
     lines.push('```');
 
     return lines.join('\n');
+}
+
+/**
+ * Insert citation comments into full file content at the referenced line numbers
+ */
+function insertCitationsIntoFile(fileContent, snippets) {
+    // Split file into lines
+    const fileLines = fileContent.split('\n');
+
+    // Create a map of line number -> citations
+    const citationsByLine = {};
+
+    snippets.forEach(snippet => {
+        const lineNum = parseInt(snippet.lineNumber, 10);
+        if (lineNum && lineNum > 0) {
+            if (!citationsByLine[lineNum]) {
+                citationsByLine[lineNum] = [];
+            }
+            citationsByLine[lineNum].push({
+                stepNumber: snippet.stepNumber,
+                title: snippet.title
+            });
+        }
+    });
+
+    // Build result with citations inserted before referenced lines
+    const resultLines = [];
+
+    for (let i = 0; i < fileLines.length; i++) {
+        const lineNum = i + 1; // 1-indexed
+
+        // Insert any citations for this line
+        if (citationsByLine[lineNum]) {
+            citationsByLine[lineNum].forEach(citation => {
+                resultLines.push(`<!-- [${citation.stepNumber}] ${escapeXml(citation.title)} (line ${lineNum}) -->`);
+            });
+        }
+
+        resultLines.push(fileLines[i]);
+    }
+
+    return resultLines.join('\n');
 }
 
 /**
@@ -197,49 +243,27 @@ function escapeXml(str) {
 function detectLanguage(filename) {
     if (!filename) return '';
     
-    // Remove line number suffix like ":36"
     const cleanFilename = filename.replace(/:\d+$/, '');
     const ext = cleanFilename.split('.').pop()?.toLowerCase();
 
     const langMap = {
-        'cljd': 'clojure',
-        'clj': 'clojure',
-        'cljs': 'clojure',
-        'dart': 'dart',
-        'js': 'javascript',
-        'ts': 'typescript',
-        'tsx': 'typescript',
-        'jsx': 'javascript',
-        'py': 'python',
-        'rs': 'rust',
-        'go': 'go',
-        'java': 'java',
-        'kt': 'kotlin',
-        'swift': 'swift',
-        'yaml': 'yaml',
-        'yml': 'yaml',
-        'json': 'json',
-        'md': 'markdown',
-        'sh': 'bash',
-        'bash': 'bash',
-        'zsh': 'bash',
-        'nix': 'nix',
-        'sql': 'sql',
-        'html': 'html',
-        'css': 'css',
-        'scss': 'scss',
-        'xml': 'xml',
-        'toml': 'toml',
-        'ini': 'ini',
-        'dockerfile': 'dockerfile',
-        'makefile': 'makefile',
-        'mk': 'makefile'
+        'cljd': 'clojure', 'clj': 'clojure', 'cljs': 'clojure',
+        'dart': 'dart', 'js': 'javascript', 'ts': 'typescript',
+        'tsx': 'typescript', 'jsx': 'javascript', 'py': 'python',
+        'rs': 'rust', 'go': 'go', 'java': 'java', 'kt': 'kotlin',
+        'swift': 'swift', 'yaml': 'yaml', 'yml': 'yaml',
+        'json': 'json', 'md': 'markdown', 'sh': 'bash',
+        'bash': 'bash', 'zsh': 'bash', 'nix': 'nix',
+        'sql': 'sql', 'html': 'html', 'css': 'css',
+        'scss': 'scss', 'xml': 'xml', 'toml': 'toml',
+        'ini': 'ini', 'dockerfile': 'dockerfile',
+        'makefile': 'makefile', 'mk': 'makefile', 'lock': 'json'
     };
     
-    // Handle Makefile specially
-    if (cleanFilename.toLowerCase() === 'makefile') {
-        return 'makefile';
-    }
+    const lowerFilename = cleanFilename.toLowerCase();
+    if (lowerFilename === 'makefile') return 'makefile';
+    if (lowerFilename === 'dockerfile') return 'dockerfile';
+    if (lowerFilename.endsWith('.lock')) return 'json';
 
     return langMap[ext] || '';
 }
