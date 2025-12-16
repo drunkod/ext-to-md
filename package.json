@@ -2,7 +2,7 @@
   "name": "codemap-exporter",
   "displayName": "Code Map Exporter",
   "description": "Export Windsurf Code Maps to Markdown with AI guides and file references",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "publisher": "your-name",
   "engines": {
     "vscode": "^1.74.0"
@@ -48,7 +48,7 @@
         "codemapExporter.includeGuides": {
           "type": "boolean",
           "default": true,
-          "description": "Include AI-generated guides in export"
+          "description": "Include guides in export"
         },
         "codemapExporter.includeFilesSection": {
           "type": "boolean",
@@ -58,8 +58,16 @@
       }
     }
   },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:watch": "node --test --watch test/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage test/*.test.js"
+  },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
     "chrome-remote-interface": "^0.33.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0"
   }
 }

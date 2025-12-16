@@ -11,21 +11,17 @@ function parseCodeMapHTML(html) {
         createdDate: '',
         description: '',
         traces: [],
-        files: {} // Collect all files with their code snippets
+        files: {}
     };
 
-    // Extract title
     codeMap.title = $('.code-map-title').first().text().trim();
 
-    // Extract creation date
     const dateText = $('.code-map-creation-date').first().text().trim();
     codeMap.createdDate = dateText.replace(/^Created\s*/i, '');
 
-    // Extract description
     const descEl = $('.code-map-description').first();
     codeMap.description = descEl.text().trim();
 
-    // Extract all traces
     $('.code-map-trace').each((index, traceEl) => {
         const trace = parseTrace($, traceEl, index + 1, codeMap.files);
         codeMap.traces.push(trace);
@@ -41,25 +37,21 @@ function parseTrace($, traceEl, traceNumber, filesCollector) {
         number: traceNumber,
         title: '',
         description: '',
-        guide: null, // AI-generated guide content
+        guide: null,
         locations: []
     };
 
-    // Get trace header info
     const $header = $trace.find('.trace-header').first();
     trace.title = $header.find('.trace-title').text().trim();
     
-    // Get description, remove "See more/less" button text
     let desc = $header.find('.trace-description').text().trim();
     trace.description = desc.replace(/See (more|less)\s*$/i, '').trim();
 
-    // Parse trace guide container (AI-generated guide)
     const $guideContainer = $trace.find('.trace-guide-container').first();
     if ($guideContainer.length) {
         trace.guide = parseTraceGuide($, $guideContainer);
     }
 
-    // Parse the trace locations tree
     const $locations = $trace.find('.trace-locations').first();
     parseTreeNodes($, $locations, trace.locations, 0, filesCollector);
 
@@ -74,21 +66,18 @@ function parseTraceGuide($, $container) {
     if (!$renderedGuide.length) return null;
 
     const guide = {
-        label: '',
+        label: 'Guide',  // Changed from dynamic label to static "Guide"
         content: ''
     };
 
-    // Get guide label
-    guide.label = $renderedGuide.find('.trace-guide-label').text().trim();
-
-    // Get the content div (the one after the label)
+    // Get the content div (skip the label div)
     const $contentDiv = $renderedGuide.children('div').not('.trace-guide-label').first();
 
     if ($contentDiv.length) {
         guide.content = convertGuideHtmlToMarkdown($, $contentDiv);
     }
 
-    return guide;
+    return guide.content ? guide : null;
 }
 
 /**
@@ -156,7 +145,6 @@ function convertGuideHtmlToMarkdown($, $container) {
                 break;
 
             default:
-                // Handle any other elements as plain text
                 const text = processInlineContent($, $el);
                 if (text.trim()) {
                     lines.push(text);
@@ -174,25 +162,12 @@ function convertGuideHtmlToMarkdown($, $container) {
 function processInlineContent($, $el) {
     let html = $el.html() || '';
 
-    // Convert <code> to backticks
     html = html.replace(/<code>([^<]*)<\/code>/gi, '`$1`');
-
-    // Convert <strong> and <b> to **
     html = html.replace(/<(strong|b)>([^<]*)<\/(strong|b)>/gi, '**$2**');
-
-    // Convert <em> and <i> to *
     html = html.replace(/<(em|i)>([^<]*)<\/(em|i)>/gi, '*$2*');
-
-    // Convert step reference links [9a], [9b], etc.
     html = html.replace(/<a[^>]*data-href="[^"]*traceLoc\/([^"]+)"[^>]*>\[([^\]]+)\]<\/a>/gi, '**[$2]**');
-
-    // Convert regular links
     html = html.replace(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/gi, '[$2]($1)');
-
-    // Remove any remaining HTML tags
     html = html.replace(/<[^>]+>/g, '');
-
-    // Decode HTML entities
     html = html.replace(/&nbsp;/g, ' ');
     html = html.replace(/&amp;/g, '&');
     html = html.replace(/&lt;/g, '<');
@@ -209,7 +184,6 @@ function parseTreeNodes($, $container, locations, depth, filesCollector) {
         const $node = $(nodeEl);
         const isRoot = $node.hasClass('root');
         
-        // Check for label
         const $label = $node.children('.trace-tree-label');
         if ($label.length) {
             const labelText = $label.first().text().trim();
@@ -223,7 +197,6 @@ function parseTreeNodes($, $container, locations, depth, filesCollector) {
             }
         }
 
-        // Check for code location
         const $codeLoc = $node.children('.code-location');
         if ($codeLoc.length) {
             const location = parseCodeLocation($, $codeLoc.first(), filesCollector);
@@ -231,7 +204,6 @@ function parseTreeNodes($, $container, locations, depth, filesCollector) {
             locations.push(location);
         }
 
-        // Recursively process children
         const $children = $node.children('.trace-tree-node-children');
         if ($children.length) {
             parseTreeNodes($, $children, locations, depth + 1, filesCollector);
@@ -247,9 +219,7 @@ function parseCodeLocation($, $loc, filesCollector) {
     const filename = $header.find('.location-filename').text().trim();
     const code = $loc.find('.code-content').text().trim();
 
-    // Collect file snippets
     if (filename && code && filesCollector) {
-        // Extract base filename (remove line number like "file.cljd:36")
         const baseFilename = filename.replace(/:\d+$/, '');
         const lineNumber = filename.match(/:(\d+)$/)?.[1] || null;
 
@@ -274,4 +244,12 @@ function parseCodeLocation($, $loc, filesCollector) {
     };
 }
 
-module.exports = { parseCodeMapHTML };
+module.exports = {
+    parseCodeMapHTML,
+    // Export for testing
+    parseTrace,
+    parseTraceGuide,
+    parseCodeLocation,
+    convertGuideHtmlToMarkdown,
+    processInlineContent
+};

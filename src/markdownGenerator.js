@@ -5,7 +5,7 @@ function generateMarkdown(codeMap, options = {}) {
     const {
         includeGuides = true,
         includeFilesSection = true,
-        fileContents = {}  // Full file contents from workspace
+        fileContents = {}
     } = options;
     const lines = [];
 
@@ -63,9 +63,6 @@ function generateMarkdown(codeMap, options = {}) {
     return lines.join('\n');
 }
 
-/**
- * Format description with step references
- */
 function formatDescription(description) {
     return description.replace(/\[(\d+[a-z])\]/g, '**[$1]**');
 }
@@ -81,9 +78,10 @@ function generateTrace(trace, includeGuides) {
         lines.push('');
     }
 
+    // Include guide if present - using "Guide" as label
     if (includeGuides && trace.guide && trace.guide.content) {
         lines.push('<details>');
-        lines.push(`<summary>📖 <strong>${trace.guide.label || 'AI Generated Guide'}</strong> (click to expand)</summary>`);
+        lines.push(`<summary>📖 <strong>Guide</strong> (click to expand)</summary>`);
         lines.push('');
         lines.push(trace.guide.content);
         lines.push('');
@@ -140,16 +138,12 @@ function generateLocations(locations) {
     return lines;
 }
 
-/**
- * Generate files section with FULL file content and citation comments
- */
 function generateFilesSection(filesMap, fileContents) {
     const lines = [];
 
     lines.push('```xml');
     lines.push('<files>');
 
-    // Sort files by name
     const sortedFiles = Object.keys(filesMap).sort();
 
     for (const filename of sortedFiles) {
@@ -159,11 +153,9 @@ function generateFilesSection(filesMap, fileContents) {
         lines.push(`<file path="${escapeXml(filename)}">`);
 
         if (fullContent) {
-            // We have the full file content - insert citations at line numbers
             const annotatedContent = insertCitationsIntoFile(fullContent, snippets);
             lines.push(annotatedContent);
         } else {
-            // Fallback: just show snippets with citations (sorted by line)
             const sortedSnippets = [...snippets].sort((a, b) => {
                 const lineA = parseInt(a.lineNumber, 10) || 0;
                 const lineB = parseInt(b.lineNumber, 10) || 0;
@@ -186,14 +178,8 @@ function generateFilesSection(filesMap, fileContents) {
     return lines.join('\n');
 }
 
-/**
- * Insert citation comments into full file content at the referenced line numbers
- */
 function insertCitationsIntoFile(fileContent, snippets) {
-    // Split file into lines
     const fileLines = fileContent.split('\n');
-
-    // Create a map of line number -> citations
     const citationsByLine = {};
 
     snippets.forEach(snippet => {
@@ -209,13 +195,11 @@ function insertCitationsIntoFile(fileContent, snippets) {
         }
     });
 
-    // Build result with citations inserted before referenced lines
     const resultLines = [];
 
     for (let i = 0; i < fileLines.length; i++) {
-        const lineNum = i + 1; // 1-indexed
+        const lineNum = i + 1;
 
-        // Insert any citations for this line
         if (citationsByLine[lineNum]) {
             citationsByLine[lineNum].forEach(citation => {
                 resultLines.push(`<!-- [${citation.stepNumber}] ${escapeXml(citation.title)} (line ${lineNum}) -->`);
@@ -228,9 +212,6 @@ function insertCitationsIntoFile(fileContent, snippets) {
     return resultLines.join('\n');
 }
 
-/**
- * Escape special XML characters
- */
 function escapeXml(str) {
     return str
         .replace(/&/g, '&amp;')
@@ -278,4 +259,15 @@ function slugify(text) {
         .substring(0, 50);
 }
 
-module.exports = { generateMarkdown };
+module.exports = {
+    generateMarkdown,
+    // Export for testing
+    formatDescription,
+    generateTrace,
+    generateLocations,
+    generateFilesSection,
+    insertCitationsIntoFile,
+    escapeXml,
+    detectLanguage,
+    slugify
+};
