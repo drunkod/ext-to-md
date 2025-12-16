@@ -1,10 +1,10 @@
-const CDP = require('chrome-remote-interface');
+import CDP from 'chrome-remote-interface';
 
 /**
  * Extract Code Map using Chrome DevTools Protocol
  * Handles lazy-loaded AI guides by clicking "See more" buttons first
  */
-async function extractCodeMapViaCDP(port = 9229) {
+export async function extractCodeMapViaCDP(port = 9229) {
     let client;
     
     try {
@@ -167,7 +167,7 @@ async function extractCodeMapViaCDP(port = 9229) {
 /**
  * Extract with option to expand all guides first
  */
-async function extractCodeMapWithGuides(port = 9229, options = {}) {
+export async function extractCodeMapWithGuides(port = 9229, options = {}) {
     const { expandGuides = true, timeout = 10000 } = options;
 
     let client;
@@ -346,7 +346,7 @@ async function extractCodeMapWithGuides(port = 9229, options = {}) {
     }
 }
 
-async function checkCDPConnection(port = 9229) {
+export async function checkCDPConnection(port = 9229) {
     try {
         const client = await CDP({ port });
         await client.close();
@@ -355,9 +355,3 @@ async function checkCDPConnection(port = 9229) {
         return false;
     }
 }
-
-module.exports = {
-    extractCodeMapViaCDP,
-    extractCodeMapWithGuides,
-    checkCDPConnection
-};

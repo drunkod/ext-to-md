@@ -1,7 +1,7 @@
 /**
  * Generate Markdown from parsed Code Map data
  */
-function generateMarkdown(codeMap, options = {}) {
+export function generateMarkdown(codeMap, options = {}) {
     const {
         includeGuides = true,
         includeFilesSection = true,
@@ -63,11 +63,11 @@ function generateMarkdown(codeMap, options = {}) {
     return lines.join('\n');
 }
 
-function formatDescription(description) {
+export function formatDescription(description) {
     return description.replace(/\[(\d+[a-z])\]/g, '**[$1]**');
 }
 
-function generateTrace(trace, includeGuides) {
+export function generateTrace(trace, includeGuides) {
     const lines = [];
 
     lines.push(`## ${trace.number}. ${trace.title}`);
@@ -100,7 +100,7 @@ function generateTrace(trace, includeGuides) {
     return lines;
 }
 
-function generateLocations(locations) {
+export function generateLocations(locations) {
     const lines = [];
     
     locations.forEach(loc => {
@@ -138,7 +138,7 @@ function generateLocations(locations) {
     return lines;
 }
 
-function generateFilesSection(filesMap, fileContents) {
+export function generateFilesSection(filesMap, fileContents) {
     const lines = [];
 
     lines.push('```xml');
@@ -178,7 +178,7 @@ function generateFilesSection(filesMap, fileContents) {
     return lines.join('\n');
 }
 
-function insertCitationsIntoFile(fileContent, snippets) {
+export function insertCitationsIntoFile(fileContent, snippets) {
     const fileLines = fileContent.split('\n');
     const citationsByLine = {};
 
@@ -212,7 +212,7 @@ function insertCitationsIntoFile(fileContent, snippets) {
     return resultLines.join('\n');
 }
 
-function escapeXml(str) {
+export function escapeXml(str) {
     return str
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -221,7 +221,7 @@ function escapeXml(str) {
         .replace(/'/g, '&apos;');
 }
 
-function detectLanguage(filename) {
+export function detectLanguage(filename) {
     if (!filename) return '';
     
     const cleanFilename = filename.replace(/:\d+$/, '');
@@ -249,7 +249,7 @@ function detectLanguage(filename) {
     return langMap[ext] || '';
 }
 
-function slugify(text) {
+export function slugify(text) {
     return text
         .toLowerCase()
         .replace(/[^\w\s-]/g, '')
@@ -258,16 +258,3 @@ function slugify(text) {
         .trim()
         .substring(0, 50);
 }
-
-module.exports = {
-    generateMarkdown,
-    // Export for testing
-    formatDescription,
-    generateTrace,
-    generateLocations,
-    generateFilesSection,
-    insertCitationsIntoFile,
-    escapeXml,
-    detectLanguage,
-    slugify
-};

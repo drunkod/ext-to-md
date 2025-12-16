@@ -1,9 +1,9 @@
-const cheerio = require('cheerio');
+import * as cheerio from 'cheerio';
 
 /**
  * Parse Code Map HTML and extract structured data
  */
-function parseCodeMapHTML(html) {
+export function parseCodeMapHTML(html) {
     const $ = cheerio.load(html, { decodeEntities: false });
     
     const codeMap = {
@@ -30,7 +30,7 @@ function parseCodeMapHTML(html) {
     return codeMap;
 }
 
-function parseTrace($, traceEl, traceNumber, filesCollector) {
+export function parseTrace($, traceEl, traceNumber, filesCollector) {
     const $trace = $(traceEl);
     
     const trace = {
@@ -61,7 +61,7 @@ function parseTrace($, traceEl, traceNumber, filesCollector) {
 /**
  * Parse the AI-generated trace guide content
  */
-function parseTraceGuide($, $container) {
+export function parseTraceGuide($, $container) {
     const $renderedGuide = $container.find('.rendered-trace-guide').first();
     if (!$renderedGuide.length) return null;
 
@@ -83,7 +83,7 @@ function parseTraceGuide($, $container) {
 /**
  * Convert guide HTML content to Markdown
  */
-function convertGuideHtmlToMarkdown($, $container) {
+export function convertGuideHtmlToMarkdown($, $container) {
     const lines = [];
 
     $container.children().each((_, el) => {
@@ -159,7 +159,7 @@ function convertGuideHtmlToMarkdown($, $container) {
 /**
  * Process inline content (code, links, strong, em, etc.)
  */
-function processInlineContent($, $el) {
+export function processInlineContent($, $el) {
     let html = $el.html() || '';
 
     html = html.replace(/<code>([^<]*)<\/code>/gi, '`$1`');
@@ -211,7 +211,7 @@ function parseTreeNodes($, $container, locations, depth, filesCollector) {
     });
 }
 
-function parseCodeLocation($, $loc, filesCollector) {
+export function parseCodeLocation($, $loc, filesCollector) {
     const $header = $loc.find('.location-header').first();
     
     const stepNumber = $header.find('.step-number').first().text().trim();
@@ -243,13 +243,3 @@ function parseCodeLocation($, $loc, filesCollector) {
         code
     };
 }
-
-module.exports = {
-    parseCodeMapHTML,
-    // Export for testing
-    parseTrace,
-    parseTraceGuide,
-    parseCodeLocation,
-    convertGuideHtmlToMarkdown,
-    processInlineContent
-};

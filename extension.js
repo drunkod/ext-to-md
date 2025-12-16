@@ -1,13 +1,13 @@
-const vscode = require('vscode');
-const path = require('path');
-const fs = require('fs');
-const { parseCodeMapHTML } = require('./src/parser');
-const { generateMarkdown } = require('./src/markdownGenerator');
-const { extractCodeMapViaCDP, checkCDPConnection } = require('./src/cdpExtractor');
+import vscode from 'vscode';
+import path from 'path';
+import fs from 'fs';
+import { parseCodeMapHTML } from './src/parser.js';
+import { generateMarkdown } from './src/markdownGenerator.js';
+import { extractCodeMapViaCDP, checkCDPConnection } from './src/cdpExtractor.js';
 
 let statusBarItem;
 
-function activate(context) {
+export function activate(context) {
     console.log('Code Map Exporter activated');
 
     // Create status bar item
@@ -356,6 +356,4 @@ function sanitizeFilename(name) {
     return name.replace(/[<>:"/\\|?*]/g, '-').replace(/\s+/g, '-').substring(0, 80);
 }
 
-function deactivate() {}
-
-module.exports = { activate, deactivate };
+export function deactivate() {}

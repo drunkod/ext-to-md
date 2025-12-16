@@ -1,7 +1,7 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-const { parseCodeMapHTML } = require('../src/parser');
-const { generateMarkdown } = require('../src/markdownGenerator');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import { parseCodeMapHTML } from '../src/parser.js';
+import { generateMarkdown } from '../src/markdownGenerator.js';
 
 describe('Integration Tests', () => {
 

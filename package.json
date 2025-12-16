@@ -9,6 +9,7 @@
   },
   "categories": ["Other"],
   "activationEvents": ["onStartupFinished"],
+  "type": "module",
   "main": "./extension.js",
   "contributes": {
     "commands": [

@@ -1,11 +1,11 @@
-const { describe, it, beforeEach } = require('node:test');
-const assert = require('node:assert');
-const {
+import { describe, it, beforeEach } from 'node:test';
+import assert from 'node:assert';
+import {
     parseCodeMapHTML,
     processInlineContent,
     convertGuideHtmlToMarkdown
-} = require('../src/parser');
-const cheerio = require('cheerio');
+} from '../src/parser.js';
+import * as cheerio from 'cheerio';
 
 describe('Parser', () => {
 

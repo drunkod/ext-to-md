@@ -1,5 +1,6 @@
-const { describe, it, mock } = require('node:test');
-const assert = require('node:assert');
+import { describe, it, mock } from 'node:test';
+import assert from 'node:assert';
+import { checkCDPConnection, extractCodeMapViaCDP } from '../src/cdpExtractor.js';
 
 // Mock CDP module for testing
 const mockCDP = {

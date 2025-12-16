@@ -1,6 +1,6 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
-const {
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import {
     generateMarkdown,
     formatDescription,
     generateFilesSection,
@@ -8,7 +8,7 @@ const {
     escapeXml,
     detectLanguage,
     slugify
-} = require('../src/markdownGenerator');
+} from '../src/markdownGenerator.js';
 
 describe('Markdown Generator', () => {
 
