@@ -1,4 +1,4 @@
-import vscode from 'vscode';
+import * as vscode from 'vscode';
 import path from 'path';
 import fs from 'fs';
 import { parseCodeMapHTML } from './src/parser.js';
