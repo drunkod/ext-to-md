@@ -14,7 +14,7 @@ function activate(context) {
         vscode.StatusBarAlignment.Right, 100
     );
     updateStatusBar('idle');
-    statusBarItem.command = 'codemap.export';
+    statusBarItem.command = 'codemap.autoExport';
     context.subscriptions.push(statusBarItem);
 
     // Command: Auto Export via CDP (No DevTools needed!)
@@ -56,7 +56,14 @@ function activate(context) {
                 const codeMapData = parseCodeMapHTML(data.html);
                 codeMapData.title = data.title;
                 
-                const markdown = generateMarkdown(codeMapData);
+                // Get config options
+                const includeGuides = config.get('includeGuides', true);
+                const includeFilesSection = config.get('includeFilesSection', true);
+
+                const markdown = generateMarkdown(codeMapData, {
+                    includeGuides,
+                    includeFilesSection
+                });
 
                 // Save file
                 await saveMarkdown(codeMapData.title, markdown);
@@ -84,7 +91,6 @@ function activate(context) {
                 const clipboardContent = await vscode.env.clipboard.readText();
                 
                 if (!clipboardContent) {
-                    // Show inline extraction helper
                     await showInlineExtractor();
                     return;
                 }
@@ -106,7 +112,12 @@ function activate(context) {
                     }
                 }
 
-                const markdown = generateMarkdown(codeMapData);
+                const config = vscode.workspace.getConfiguration('codemapExporter');
+                const markdown = generateMarkdown(codeMapData, {
+                    includeGuides: config.get('includeGuides', true),
+                    includeFilesSection: config.get('includeFilesSection', true)
+                });
+
                 await saveMarkdown(codeMapData.title, markdown);
 
             } catch (error) {
@@ -163,98 +174,34 @@ function showCDPSetupInstructions() {
 <html>
 <head>
     <style>
-        body {
-            font-family: var(--vscode-font-family);
-            padding: 30px;
-            color: var(--vscode-foreground);
-            background: var(--vscode-editor-background);
-            line-height: 1.8;
-        }
+        body { font-family: var(--vscode-font-family); padding: 30px; color: var(--vscode-foreground); background: var(--vscode-editor-background); line-height: 1.8; }
         h1 { color: var(--vscode-textLink-foreground); border-bottom: 1px solid var(--vscode-textLink-foreground); padding-bottom: 10px; }
         h2 { color: var(--vscode-textLink-activeForeground); margin-top: 30px; }
-        .code-block {
-            background: var(--vscode-textCodeBlock-background);
-            padding: 15px;
-            border-radius: 6px;
-            font-family: var(--vscode-editor-font-family);
-            margin: 15px 0;
-            overflow-x: auto;
-        }
-        .step {
-            background: var(--vscode-input-background);
-            border-left: 4px solid var(--vscode-textLink-foreground);
-            padding: 15px;
-            margin: 15px 0;
-        }
-        .warning {
-            background: var(--vscode-inputValidation-warningBackground);
-            border: 1px solid var(--vscode-inputValidation-warningBorder);
-            padding: 15px;
-            border-radius: 6px;
-            margin: 15px 0;
-        }
-        ul { padding-left: 20px; }
-        li { margin: 8px 0; }
+        .code-block { background: var(--vscode-textCodeBlock-background); padding: 15px; border-radius: 6px; font-family: var(--vscode-editor-font-family); margin: 15px 0; overflow-x: auto; }
+        .step { background: var(--vscode-input-background); border-left: 4px solid var(--vscode-textLink-foreground); padding: 15px; margin: 15px 0; }
+        .warning { background: var(--vscode-inputValidation-warningBackground); border: 1px solid var(--vscode-inputValidation-warningBorder); padding: 15px; border-radius: 6px; margin: 15px 0; }
     </style>
 </head>
 <body>
     <h1>🚀 Setup Auto-Export (No DevTools Required)</h1>
-    
-    <p>To enable one-click Code Map export, you need to start Windsurf/VS Code with Chrome DevTools Protocol enabled.</p>
-    
-    <h2>Option 1: Create a Launch Script</h2>
-    
+    <p>Start Windsurf/VS Code with Chrome DevTools Protocol enabled:</p>
     <div class="step">
         <strong>Linux/macOS:</strong>
-        <div class="code-block">#!/bin/bash
-# Save as ~/bin/windsurf-debug.sh
-windsurf --remote-debugging-port=9229 "$@"</div>
+        <div class="code-block">windsurf --remote-debugging-port=9229</div>
     </div>
-    
     <div class="step">
         <strong>Windows:</strong>
-        <div class="code-block">REM Save as windsurf-debug.bat
-"C:\\\\Path\\\\To\\\\Windsurf.exe" --remote-debugging-port=9229 %*</div>
+        <div class="code-block">"C:\\Path\\To\\Windsurf.exe" --remote-debugging-port=9229</div>
     </div>
-    
-    <h2>Option 2: Modify Desktop Shortcut</h2>
-    
-    <div class="step">
-        <p>Add <code>--remote-debugging-port=9229</code> to your Windsurf shortcut:</p>
-        <ul>
-            <li><strong>Linux:</strong> Edit ~/.local/share/applications/windsurf.desktop</li>
-            <li><strong>Windows:</strong> Right-click shortcut → Properties → Target</li>
-            <li><strong>macOS:</strong> Use Automator to create a wrapper app</li>
-        </ul>
-    </div>
-    
-    <h2>Option 3: VS Code/Windsurf Settings</h2>
-    
-    <div class="step">
-        <p>Some versions support this in settings.json:</p>
-        <div class="code-block">{
-    "remote.debugging.port": 9229
-}</div>
-    </div>
-    
-    <div class="warning">
-        <strong>⚠️ Security Note:</strong> CDP allows remote access to your editor. Only enable on trusted networks, 
-        or bind to localhost only (which is the default).
-    </div>
-    
     <h2>After Setup</h2>
-    
     <ol>
-        <li>Restart Windsurf with the new configuration</li>
+        <li>Restart Windsurf with the flag</li>
         <li>Open a Code Map</li>
-        <li>Run command: <strong>"Code Map: Auto Export (CDP)"</strong></li>
-        <li>The markdown file will be created automatically!</li>
+        <li>Press <strong>Ctrl+Alt+M</strong> or run "Code Map: Auto Export (CDP)"</li>
     </ol>
-    
-    <h2>Alternative: Use Clipboard Method</h2>
-    
-    <p>If you don't want to modify how Windsurf starts, you can still use the clipboard method which requires
-    a quick paste in DevTools (F12 → Console → Paste → Enter → Ctrl+Alt+M).</p>
+    <div class="warning">
+        <strong>⚠️ Security:</strong> CDP allows remote access. Only enable on trusted networks.
+    </div>
 </body>
 </html>`;
 }
@@ -274,52 +221,25 @@ async function showInlineExtractor() {
 <head>
     <style>
         body { font-family: var(--vscode-font-family); padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
-        .script-box { background: var(--vscode-textCodeBlock-background); padding: 10px; border-radius: 4px; font-size: 11px; word-break: break-all; margin: 10px 0; max-height: 100px; overflow: auto; }
-        button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; font-size: 14px; }
+        .script-box { background: var(--vscode-textCodeBlock-background); padding: 10px; border-radius: 4px; font-size: 11px; word-break: break-all; margin: 10px 0; max-height: 80px; overflow: auto; }
+        button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
         button:hover { background: var(--vscode-button-hoverBackground); }
-        .step { margin: 20px 0; padding: 15px; background: var(--vscode-input-background); border-radius: 6px; }
-        .step-num { display: inline-block; width: 30px; height: 30px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border-radius: 50%; text-align: center; line-height: 30px; margin-right: 10px; }
-        kbd { background: var(--vscode-keybindingLabel-background); padding: 3px 6px; border-radius: 3px; border: 1px solid var(--vscode-keybindingLabel-border); }
+        .step { margin: 15px 0; padding: 15px; background: var(--vscode-input-background); border-radius: 6px; }
+        kbd { background: var(--vscode-keybindingLabel-background); padding: 3px 6px; border-radius: 3px; }
     </style>
 </head>
 <body>
     <h2>📦 Quick Export Code Map</h2>
-    
-    <div class="step">
-        <span class="step-num">1</span>
-        <button id="copyBtn">📋 Copy Extractor Script</button>
-        <div class="script-box" id="scriptBox">${extractorScript}</div>
-    </div>
-    
-    <div class="step">
-        <span class="step-num">2</span>
-        Press <kbd>F12</kbd> to open DevTools → Go to <strong>Console</strong> tab
-    </div>
-    
-    <div class="step">
-        <span class="step-num">3</span>
-        Paste the script (<kbd>Ctrl</kbd>+<kbd>V</kbd>) and press <kbd>Enter</kbd>
-    </div>
-    
-    <div class="step">
-        <span class="step-num">4</span>
-        <button id="exportBtn">📄 Export to Markdown</button>
-        <span style="opacity: 0.7; margin-left: 10px;">or press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd></span>
-    </div>
-    
+    <div class="step"><button id="copyBtn">📋 Copy Script</button><div class="script-box">${extractorScript}</div></div>
+    <div class="step">Press <kbd>F12</kbd> → Console → Paste → Enter</div>
+    <div class="step"><button id="exportBtn">📄 Export to Markdown</button></div>
     <script>
         const vscode = acquireVsCodeApi();
-        const script = document.getElementById('scriptBox').textContent;
-        
         document.getElementById('copyBtn').onclick = async () => {
-            await navigator.clipboard.writeText(script);
+            await navigator.clipboard.writeText(document.querySelector('.script-box').textContent);
             document.getElementById('copyBtn').textContent = '✅ Copied!';
-            setTimeout(() => document.getElementById('copyBtn').textContent = '📋 Copy Extractor Script', 2000);
         };
-        
-        document.getElementById('exportBtn').onclick = () => {
-            vscode.postMessage({ command: 'export' });
-        };
+        document.getElementById('exportBtn').onclick = () => vscode.postMessage({ command: 'export' });
     </script>
 </body>
 </html>`;
@@ -333,25 +253,16 @@ async function showInlineExtractor() {
 }
 
 function updateStatusBar(state) {
-    switch (state) {
-        case 'idle':
-            statusBarItem.text = '$(file-code) CodeMap';
-            statusBarItem.tooltip = 'Click to export Code Map to Markdown';
-            statusBarItem.backgroundColor = undefined;
-            break;
-        case 'extracting':
-            statusBarItem.text = '$(sync~spin) Extracting...';
-            statusBarItem.tooltip = 'Extracting Code Map...';
-            break;
-        case 'success':
-            statusBarItem.text = '$(check) Exported!';
-            statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-            break;
-        case 'error':
-            statusBarItem.text = '$(error) Failed';
-            statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-            break;
-    }
+    const states = {
+        'idle': { text: '$(file-code) CodeMap', tooltip: 'Click to export Code Map (Ctrl+Alt+M)' },
+        'extracting': { text: '$(sync~spin) Extracting...', tooltip: 'Extracting Code Map...' },
+        'success': { text: '$(check) Exported!', bg: 'statusBarItem.warningBackground' },
+        'error': { text: '$(error) Failed', bg: 'statusBarItem.errorBackground' }
+    };
+    const s = states[state];
+    statusBarItem.text = s.text;
+    statusBarItem.tooltip = s.tooltip || '';
+    statusBarItem.backgroundColor = s.bg ? new vscode.ThemeColor(s.bg) : undefined;
     statusBarItem.show();
 }
 

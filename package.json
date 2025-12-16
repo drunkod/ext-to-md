@@ -1,8 +1,8 @@
 {
   "name": "codemap-exporter",
   "displayName": "Code Map Exporter",
-  "description": "Export Windsurf Code Maps to Markdown - No DevTools needed!",
-  "version": "2.0.0",
+  "description": "Export Windsurf Code Maps to Markdown with AI guides and file references",
+  "version": "2.1.0",
   "publisher": "your-name",
   "engines": {
     "vscode": "^1.74.0"
@@ -27,7 +27,7 @@
     ],
     "keybindings": [
       {
-        "command": "codemap.export",
+        "command": "codemap.autoExport",
         "key": "ctrl+alt+m",
         "mac": "cmd+alt+m"
       }
@@ -44,6 +44,16 @@
           "type": "string",
           "default": "",
           "description": "Default folder for exported markdown files"
+        },
+        "codemapExporter.includeGuides": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include AI-generated guides in export"
+        },
+        "codemapExporter.includeFilesSection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include referenced files section at the end"
         }
       }
     }

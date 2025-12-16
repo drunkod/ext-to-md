@@ -1,7 +1,8 @@
 /**
  * Generate Markdown from parsed Code Map data
  */
-function generateMarkdown(codeMap) {
+function generateMarkdown(codeMap, options = {}) {
+    const { includeGuides = true, includeFilesSection = true } = options;
     const lines = [];
 
     // Title
@@ -18,7 +19,7 @@ function generateMarkdown(codeMap) {
     if (codeMap.description) {
         lines.push('## Overview');
         lines.push('');
-        lines.push(codeMap.description);
+        lines.push(formatDescription(codeMap.description));
         lines.push('');
     }
 
@@ -37,10 +38,20 @@ function generateMarkdown(codeMap) {
 
     // Traces
     codeMap.traces.forEach(trace => {
-        lines.push(...generateTrace(trace));
+        lines.push(...generateTrace(trace, includeGuides));
     });
 
+    // Files Section
+    if (includeFilesSection && codeMap.files && Object.keys(codeMap.files).length > 0) {
+        lines.push('---');
+        lines.push('');
+        lines.push('## Referenced Files');
+        lines.push('');
+        lines.push(generateFilesSection(codeMap.files));
+    }
+
     // Footer
+    lines.push('');
     lines.push('---');
     lines.push('');
     lines.push(`*Exported from Code Map on ${new Date().toLocaleDateString()}*`);
@@ -48,7 +59,15 @@ function generateMarkdown(codeMap) {
     return lines.join('\n');
 }
 
-function generateTrace(trace) {
+/**
+ * Format description with step references
+ */
+function formatDescription(description) {
+    // Bold step references like [2d], [4b]
+    return description.replace(/\[(\d+[a-z])\]/g, '**[$1]**');
+}
+
+function generateTrace(trace, includeGuides) {
     const lines = [];
 
     // Trace header
@@ -57,6 +76,17 @@ function generateTrace(trace) {
 
     if (trace.description) {
         lines.push(`> ${trace.description}`);
+        lines.push('');
+    }
+
+    // Include AI-generated guide if present
+    if (includeGuides && trace.guide && trace.guide.content) {
+        lines.push('<details>');
+        lines.push(`<summary>📖 <strong>${trace.guide.label || 'AI Generated Guide'}</strong> (click to expand)</summary>`);
+        lines.push('');
+        lines.push(trace.guide.content);
+        lines.push('');
+        lines.push('</details>');
         lines.push('');
     }
 
@@ -113,10 +143,64 @@ function generateLocations(locations) {
     return lines;
 }
 
+/**
+ * Generate files section in XML format
+ */
+function generateFilesSection(files) {
+    const lines = [];
+
+    lines.push('```xml');
+    lines.push('<files>');
+
+    // Sort files by name
+    const sortedFiles = Object.keys(files).sort();
+
+    for (const filename of sortedFiles) {
+        const snippets = files[filename];
+
+        lines.push(`<file path="${escapeXml(filename)}">`);
+
+        // Add each code snippet with context
+        snippets.forEach((snippet, index) => {
+            if (index > 0) {
+                lines.push('');
+                lines.push('<!-- ... -->');
+                lines.push('');
+            }
+
+            // Add comment with step reference and title
+            lines.push(`<!-- [${snippet.stepNumber}] ${escapeXml(snippet.title)}${snippet.lineNumber ? ` (line ${snippet.lineNumber})` : ''} -->`);
+            lines.push(snippet.code);
+        });
+
+        lines.push('</file>');
+    }
+
+    lines.push('</files>');
+    lines.push('```');
+
+    return lines.join('\n');
+}
+
+/**
+ * Escape special XML characters
+ */
+function escapeXml(str) {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
 function detectLanguage(filename) {
     if (!filename) return '';
     
-    const ext = filename.split('.').pop()?.toLowerCase();
+    // Remove line number suffix like ":36"
+    const cleanFilename = filename.replace(/:\d+$/, '');
+    const ext = cleanFilename.split('.').pop()?.toLowerCase();
+
     const langMap = {
         'cljd': 'clojure',
         'clj': 'clojure',
@@ -124,6 +208,8 @@ function detectLanguage(filename) {
         'dart': 'dart',
         'js': 'javascript',
         'ts': 'typescript',
+        'tsx': 'typescript',
+        'jsx': 'javascript',
         'py': 'python',
         'rs': 'rust',
         'go': 'go',
@@ -133,9 +219,28 @@ function detectLanguage(filename) {
         'yaml': 'yaml',
         'yml': 'yaml',
         'json': 'json',
-        'md': 'markdown'
+        'md': 'markdown',
+        'sh': 'bash',
+        'bash': 'bash',
+        'zsh': 'bash',
+        'nix': 'nix',
+        'sql': 'sql',
+        'html': 'html',
+        'css': 'css',
+        'scss': 'scss',
+        'xml': 'xml',
+        'toml': 'toml',
+        'ini': 'ini',
+        'dockerfile': 'dockerfile',
+        'makefile': 'makefile',
+        'mk': 'makefile'
     };
     
+    // Handle Makefile specially
+    if (cleanFilename.toLowerCase() === 'makefile') {
+        return 'makefile';
+    }
+
     return langMap[ext] || '';
 }
 
@@ -145,7 +250,8 @@ function slugify(text) {
         .replace(/[^\w\s-]/g, '')
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-')
-        .trim();
+        .trim()
+        .substring(0, 50);
 }
 
 module.exports = { generateMarkdown };

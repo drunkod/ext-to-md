@@ -2,21 +2,15 @@ const CDP = require('chrome-remote-interface');
 
 /**
  * Extract Code Map using Chrome DevTools Protocol
- * This works WITHOUT opening DevTools manually!
  */
 async function extractCodeMapViaCDP(port = 9229) {
     let client;
     
     try {
-        // Connect to VS Code's CDP endpoint
         client = await CDP({ port });
-        
         const { Runtime } = client;
-        
-        // Enable runtime
         await Runtime.enable();
         
-        // Execute extraction script in page context
         const result = await Runtime.evaluate({
             expression: `
                 (function() {
@@ -24,17 +18,24 @@ async function extractCodeMapViaCDP(port = 9229) {
                                  || document.querySelector('.code-map-editor-container');
                     
                     if (!codeMap) {
-                        return { error: 'No Code Map found' };
+                        return { error: 'No Code Map found. Make sure a Code Map is open and active.' };
                     }
                     
                     const title = codeMap.querySelector('.code-map-title')?.textContent?.trim() || 'Untitled';
                     
-                    // Clone and expand all sections
+                    // Clone and expand all sections for complete export
                     const clone = codeMap.cloneNode(true);
+
+                    // Expand all collapsed sections
                     clone.querySelectorAll('.trace-locations, .trace-guide-container').forEach(el => {
                         el.style.display = 'block';
                     });
                     
+                    // Also click all "See more" buttons to expand guides
+                    clone.querySelectorAll('.trace-header[data-collapsed="true"]').forEach(header => {
+                        header.setAttribute('data-collapsed', 'false');
+                    });
+
                     return {
                         success: true,
                         title: title,
@@ -54,22 +55,14 @@ async function extractCodeMapViaCDP(port = 9229) {
         
     } catch (error) {
         if (error.code === 'ECONNREFUSED') {
-            throw new Error(
-                'CDP connection refused. Start VS Code with: --remote-debugging-port=9229\n' +
-                'Or use the manual clipboard method.'
-            );
+            throw new Error('CDP connection refused. Start with: --remote-debugging-port=9229');
         }
         throw error;
     } finally {
-        if (client) {
-            await client.close();
-        }
+        if (client) await client.close();
     }
 }
 
-/**
- * Check if CDP is available
- */
 async function checkCDPConnection(port = 9229) {
     try {
         const client = await CDP({ port });
@@ -80,7 +73,4 @@ async function checkCDPConnection(port = 9229) {
     }
 }
 
-module.exports = { 
-    extractCodeMapViaCDP, 
-    checkCDPConnection
-};
+module.exports = { extractCodeMapViaCDP, checkCDPConnection };
