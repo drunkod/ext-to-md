@@ -4,11 +4,27 @@
   "description": "Export Windsurf Code Maps to Markdown with AI guides and file references",
   "version": "2.2.0",
   "publisher": "your-name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/codemap-exporter"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/codemap-exporter/issues"
+  },
+  "homepage": "https://github.com/your-username/codemap-exporter#readme",
   "engines": {
     "vscode": "^1.74.0"
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "codemap",
+    "windsurf",
+    "markdown",
+    "export",
+    "documentation"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -66,13 +82,16 @@
   "scripts": {
     "test": "node --test test/*.test.js",
     "test:watch": "node --test --watch test/*.test.js",
-    "test:coverage": "node --test --experimental-test-coverage test/*.test.js"
+    "test:coverage": "node --test --experimental-test-coverage test/*.test.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "dependencies": {
     "cheerio": "^1.1.2",
     "chrome-remote-interface": "^0.33.3"
   },
   "devDependencies": {
-    "@types/vscode": "^1.74.0"
+    "@types/vscode": "^1.74.0",
+    "@vscode/vsce": "^2.22.0"
   }
 }

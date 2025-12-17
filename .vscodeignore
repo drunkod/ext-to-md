@@ -1,0 +1,41 @@
+# Source control
+.git/
+.gitignore
+
+# Development files
+src/**/*.test.js
+test/
+*.test.js
+
+# Node development dependencies
+node_modules/.bin/
+node_modules/**/test/
+node_modules/**/tests/
+node_modules/**/*.md
+node_modules/**/*.txt
+node_modules/**/LICENSE*
+node_modules/**/CHANGELOG*
+node_modules/**/.github/
+node_modules/**/docs/
+node_modules/**/example/
+node_modules/**/examples/
+node_modules/**/*.ts
+node_modules/**/*.map
+
+# Build artifacts
+*.vsix
+.vscode-test/
+
+# Config files
+.eslintrc*
+.prettierrc*
+tsconfig.json
+jsconfig.json
+
+# Documentation (optional - keep if you want)
+# ARCHITECTURE.md
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db
