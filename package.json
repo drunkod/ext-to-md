@@ -7,8 +7,12 @@
   "engines": {
     "vscode": "^1.74.0"
   },
-  "categories": ["Other"],
-  "activationEvents": ["onStartupFinished"],
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "type": "module",
   "main": "./extension.js",
   "contributes": {
@@ -65,8 +69,8 @@
     "test:coverage": "node --test --experimental-test-coverage test/*.test.js"
   },
   "dependencies": {
-    "cheerio": "^1.0.0-rc.12",
-    "chrome-remote-interface": "^0.33.0"
+    "cheerio": "^1.1.2",
+    "chrome-remote-interface": "^0.33.3"
   },
   "devDependencies": {
     "@types/vscode": "^1.74.0"
